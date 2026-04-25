@@ -1,6 +1,6 @@
 # RL Playground
 
-Learning reinforcement learning by building things.
+Learning Reinforcement Learning by building things.
 
 ## Project 1: Snake
 
@@ -8,15 +8,21 @@ Teaching an agent to play Snake using Q-learning.
 
 ## Progress Roadmap
 
-- [x] Setup Pygame & Window
-- [x] Membuat State, Action, dan Reward dasar
-- [x] Menambahkan sistem *spawn* makanan
-- [ ] Membangun logika tubuh ular yang memanjang
-- [ ] Menyambungkan game dengan algoritma Reinforcement Learning (Q-Learning/DQN)
+- [x] Pygame & Window setup
+- [x] Initial State, Action, and Reward implementation
+- [x] Food spawning system
+- [x] Snake growth and body logic
+- [ ] Integrate with Reinforcement Learning algorithms (Q-Learning/DQN)
 
-## Cara Menjalankan
+## How to Run
 
-1. Clone repositori ini.
-2. Buat virtual environment baru: `python3 -m venv venv`
-3. Aktifkan environment: `source venv/bin/activate`
-4. Jalankan game: `python3 environment.py`
+1. Clone this repository:
+   `git clone <your-repo-link>`
+2. Create a virtual environment:
+   `python3 -m venv venv`
+3. Activate the environment:
+   `source venv/bin/activate`  # For Linux/macOS
+   or
+   `venv\Scripts\activate`      # For Windows
+4. Run the game:
+   `python3 environment.py`
