@@ -7,7 +7,7 @@ class SnakeEnv:
     def __init__(self):
         pygame.init()
         self.window_size = 800
-        self.cell_size = 100
+        self.cell_size = 40
         self.screen = pygame.display.set_mode((self.window_size, self.window_size))
         pygame.display.set_caption("RL Playground - Snake")
         self.clock = pygame.time.Clock()
