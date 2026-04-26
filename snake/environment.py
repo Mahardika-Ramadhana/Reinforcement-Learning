@@ -8,7 +8,7 @@ class SnakeEnv:
     def __init__(self):
         pygame.init()
         self.window_size = 600
-        self.cell_size = 60
+        self.cell_size = 30 # Ubah dari 60 ke 30 (Grid jadi 20x20)
         self.screen = pygame.display.set_mode((self.window_size, self.window_size))
         pygame.display.set_caption("RL Snake - Dynamic Sensing")
         self.clock = pygame.time.Clock()
