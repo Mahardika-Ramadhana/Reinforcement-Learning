@@ -1,8 +1,10 @@
 import torch
 import random
+import os
 from collections import deque
 from environment import SnakeEnv
 from model import Linear_QNet, QTrainer
+from helper import plot
 
 
 class Agent:
@@ -12,14 +14,27 @@ class Agent:
         self.gamma = 0.9  # Discount rate
         self.memory = deque(maxlen=100_000)  # Experience Replay Buffer
         self.model = Linear_QNet(24, 256, 256, 3)
-        self.model.to_device()  # Sinkronisasi ke GPU
+        self.model.to_device()
         self.trainer = QTrainer(self.model, lr=0.001, gamma=self.gamma)
+        self.record = 0
+        
+        # Load Checkpoint jika ada
+        self.load_model()
+
+    def load_model(self):
+        file_path = "./model/model.pth"
+        if os.path.exists(file_path):
+            checkpoint = torch.load(file_path, map_location=self.model.device)
+            self.model.load_state_dict(checkpoint['model_state_dict'])
+            self.n_games = checkpoint['n_games']
+            self.record = checkpoint['record']
+            print(f"Resuming from Game: {self.n_games}, Record: {self.record}")
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
 
     def train_long_memory(self):
-        # Experience Replay: Belajar dari kumpulan memori acak agar tidak bias
+        # Experience Replay
         if len(self.memory) > 1000:
             mini_sample = random.sample(self.memory, 1000)
         else:
@@ -28,22 +43,25 @@ class Agent:
         self.trainer.train_step(states, actions, rewards, next_states, dones)
 
     def get_action(self, state):
-        # EPSILON DECAY: Awalnya ngaco, lama-lama nurut sama model
-        self.epsilon = max(10, 200 - self.n_games)
+        # EPSILON DECAY: Decay based on n_games
+        # Start high exploration, then transition to exploitation
+        self.epsilon = max(10, 150 - self.n_games) 
         final_move = [0, 0, 0]
         if random.randint(0, 200) < self.epsilon:
-            move = random.randint(0, 2)  # Gerak acak
+            move = random.randint(0, 2)
             final_move[move] = 1
         else:
             state0 = torch.tensor(state, dtype=torch.float).to(self.model.device)
             prediction = self.model(state0)
-            move = torch.argmax(prediction).item()  # Ikut prediksi otak
+            move = torch.argmax(prediction).item()
             final_move[move] = 1
         return final_move
 
 
 def train():
-    record = 0
+    plot_scores = []
+    plot_mean_scores = []
+    total_score = 0
     agent = Agent()
     game = SnakeEnv()
 
@@ -53,22 +71,27 @@ def train():
         state_new, reward, done = game.step(final_move)
         game.render()
 
-        # Latih memori jangka pendek (tiap langkah)
         agent.trainer.train_step(state_old, final_move, reward, state_new, done)
         agent.remember(state_old, final_move, reward, state_new, done)
 
         if done:
-            # FIX SKOR: Simpan sebelum reset agar tidak terhapus
             final_score = game.score
             game.reset()
             agent.n_games += 1
-            agent.train_long_memory()  # Latih memori jangka panjang saat mati
+            agent.train_long_memory()
 
-            if final_score > record:
-                record = final_score
-                agent.model.save()
+            if final_score > agent.record:
+                agent.record = final_score
+                agent.model.save(agent.n_games, agent.record)
 
-            print(f"Game {agent.n_games} | Score: {final_score} | Record: {record}")
+            print(f"Game {agent.n_games} | Score: {final_score} | Record: {agent.record}")
+            
+            # Update Plot
+            plot_scores.append(final_score)
+            total_score += final_score
+            mean_score = total_score / agent.n_games
+            plot_mean_scores.append(mean_score)
+            plot(plot_scores, plot_mean_scores)
 
 
 if __name__ == "__main__":

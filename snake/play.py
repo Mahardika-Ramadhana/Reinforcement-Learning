@@ -8,11 +8,12 @@ def play():
     game = SnakeEnv()
     
     model = Linear_QNet(24, 256, 256, 3)
-    model.load_state_dict(torch.load("model/model.pth", map_location=model.device))
+    checkpoint = torch.load("model/model.pth", map_location=model.device)
+    model.load_state_dict(checkpoint['model_state_dict'])
     model.to_device()
     model.eval()
 
-    print("AI is playing... Press Ctrl+C to stop.")
+    print(f"Playing with model trained for {checkpoint['n_games']} games. Record: {checkpoint['record']}")
     
     record = 0
     while True:

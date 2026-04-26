@@ -24,12 +24,19 @@ class Linear_QNet(nn.Module):
     def to_device(self):
         self.to(self.device)
 
-    def save(self, file_name="model.pth"):
+    def save(self, n_games, record, file_name="model.pth"):
         model_folder_path = "./model"
         if not os.path.exists(model_folder_path):
             os.makedirs(model_folder_path)
-        file_name = os.path.join(model_folder_path, file_name)
-        torch.save(self.state_dict(), file_name)
+        file_path = os.path.join(model_folder_path, file_name)
+        
+        checkpoint = {
+            'n_games': n_games,
+            'record': record,
+            'model_state_dict': self.state_dict()
+        }
+        torch.save(checkpoint, file_path)
+        print(f"Checkpoint saved: {file_path} (Games: {n_games}, Record: {record})")
 
 
 class QTrainer:
