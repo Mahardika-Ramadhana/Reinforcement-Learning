@@ -1,6 +1,7 @@
 import torch
 import random
 import os
+import pygame
 from collections import deque
 from environment import SnakeEnv
 from model import Linear_QNet, QTrainer
@@ -14,8 +15,7 @@ class Agent:
         self.memory = deque(maxlen=100_000)
         self.record = 0
         
-        # 404 inputs (400 grid + 4 direction)
-        self.model = Linear_QNet(404, 512, 256, 3) # Increased hidden size for more complex state
+        self.model = Linear_QNet(404, 512, 256, 3)
         self.model.to_device()
         
         self.target_model = Linear_QNet(404, 512, 256, 3)
@@ -41,7 +41,7 @@ class Agent:
             print(f"Resuming from Game: {self.n_games}, Record: {self.record}")
 
     def get_action(self, state):
-        self.epsilon = max(10, 150 - self.n_games) # Slower decay for complex state
+        self.epsilon = max(10, 150 - self.n_games)
         
         if random.randint(0, 200) < self.epsilon:
             return self._get_random_move()
@@ -76,13 +76,30 @@ def train():
     
     agent = Agent()
     game = SnakeEnv()
+    
+    show_visual = True # Toggle ini untuk mematikan render
+
+    print("Training started. Press 'V' to toggle visual render ON/OFF.")
 
     while True:
+        # Handle key events for rendering toggle
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                agent.model.save(agent.n_games, agent.record)
+                pygame.quit()
+                return
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_v:
+                    show_visual = not show_visual
+                    print(f"Visual render: {'ON' if show_visual else 'OFF'}")
+
         old_state = game.get_state()
         action = agent.get_action(old_state)
         
         new_state, reward, done = game.step(action)
-        game.render(n_games=agent.n_games, record=agent.record)
+        
+        if show_visual:
+            game.render(n_games=agent.n_games, record=agent.record)
 
         agent.trainer.train_step(old_state, action, reward, new_state, done)
         agent.remember(old_state, action, reward, new_state, done)

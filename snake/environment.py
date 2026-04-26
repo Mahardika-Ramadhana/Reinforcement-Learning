@@ -119,9 +119,8 @@ class SnakeEnv:
         self.clock.tick(1000)
 
     def _handle_events(self):
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit(); sys.exit()
+        # Events are now handled in agent.py for better control
+        pass
 
     def _place_food(self):
         while True:
