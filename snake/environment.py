@@ -83,30 +83,27 @@ class SnakeEnv:
         return pt in self.snake_body[1:]
 
     def get_state(self):
-        # 0: Empty, 1: Food, Body: Gradient from 0.1 (tail) to 0.9 (near head), 1.0: Head
         grid = np.zeros((self.grid_size, self.grid_size))
         
-        # Draw Body with Temporal Gradient (Tail is closer to 0, Head is 1.0)
         body_length = len(self.snake_body)
         for i, p in enumerate(reversed(self.snake_body)):
-            # tail (index 0 in reversed) -> value 0.1
-            # head (last index in reversed) -> value 1.0
-            val = 0.1 + (0.9 * (i / (body_length - 1))) if body_length > 1 else 1.0
-            grid[p[1]//self.cell_size][p[0]//self.cell_size] = val
+            ix, iy = p[0] // self.cell_size, p[1] // self.cell_size
+            # Safety check: avoid IndexError if snake is exactly on boundary (colliding)
+            if 0 <= ix < self.grid_size and 0 <= iy < self.grid_size:
+                val = 0.1 + (0.9 * (i / (body_length - 1))) if body_length > 1 else 1.0
+                grid[iy][ix] = val
             
-        # Draw Food (Special value -1.0 to distinguish from snake)
-        grid[self.food_pos[1]//self.cell_size][self.food_pos[0]//self.cell_size] = -1.0
+        fx, fy = self.food_pos[0] // self.cell_size, self.food_pos[1] // self.cell_size
+        if 0 <= fx < self.grid_size and 0 <= fy < self.grid_size:
+            grid[fy][fx] = -1.0
         
-        # Flatten (400) + Current Direction (4) = 404 inputs
         state = grid.flatten().tolist()
         state.extend([self.direction == i for i in range(4)])
-        
         return np.array(state, dtype=float)
 
     def render(self, n_games=0, record=0):
         self.screen.fill((0, 0, 0))
         for i, p in enumerate(self.snake_body):
-            # Visual gradient for human monitor
             color_val = max(50, 255 - (i * 5))
             color = (0, color_val, 0) if i == 0 else (0, max(0, color_val-50), 0)
             pygame.draw.rect(self.screen, color, (p[0]+1, p[1]+1, self.cell_size-2, self.cell_size-2))
@@ -119,7 +116,6 @@ class SnakeEnv:
         self.clock.tick(1000)
 
     def _handle_events(self):
-        # Events are now handled in agent.py for better control
         pass
 
     def _place_food(self):
