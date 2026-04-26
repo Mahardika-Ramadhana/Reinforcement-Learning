@@ -10,15 +10,15 @@ class Agent:
     def __init__(self):
         self.n_games = 0
         self.epsilon = 0
-        self.gamma = 0.98
+        self.gamma = 0.95 # Slightly lower for faster grid 20x20 convergence
         self.memory = deque(maxlen=100_000)
         self.record = 0
         
-        # Total inputs: 4 (danger) + 4 (direction) + 4 (food rel) + 8 (vision obs) + 8 (vision apple) + 4 (tail rel) = 32
-        self.model = Linear_QNet(32, 256, 256, 3)
+        # 11 inputs: 3 (Danger) + 4 (Direction) + 4 (Food)
+        self.model = Linear_QNet(11, 256, 256, 3)
         self.model.to_device()
         
-        self.target_model = Linear_QNet(32, 256, 256, 3)
+        self.target_model = Linear_QNet(11, 256, 256, 3)
         self.target_model.to_device()
         self.sync_target_model()
         
@@ -41,8 +41,7 @@ class Agent:
             print(f"Resuming from Game: {self.n_games}, Record: {self.record}")
 
     def get_action(self, state):
-        # Slower epsilon decay for 20x20 grid
-        self.epsilon = max(10, 100 - (self.n_games / 2))
+        self.epsilon = max(0, 80 - self.n_games)
         
         if random.randint(0, 200) < self.epsilon:
             return self._get_random_move()
@@ -89,10 +88,8 @@ def train():
         agent.remember(old_state, action, reward, new_state, done)
 
         if done:
-            # Capture score BEFORE resetting the game
             final_score = game.score
             game.reset()
-            
             agent.n_games += 1
             agent.train_long_memory()
 

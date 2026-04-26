@@ -13,7 +13,7 @@ class SnakeEnv:
         self.grid_size = self.window_size // self.cell_size
         
         self.screen = pygame.display.set_mode((self.window_size, self.window_size))
-        pygame.display.set_caption("RL Snake AI")
+        pygame.display.set_caption("RL Snake AI - Relative Perception")
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont("arial", 20)
         
@@ -39,21 +39,19 @@ class SnakeEnv:
         self.frame_iteration += 1
         self._handle_events()
         
-        # Simpan jarak lama ke apel
-        old_dist = np.linalg.norm(np.array(self.head) - np.array(self.food_pos))
-        
+        old_dist = self._get_dist_to_food(self.head)
         self._update_direction(action)
         self._move_snake()
-        
-        # Hitung jarak baru
-        new_dist = np.linalg.norm(np.array(self.head) - np.array(self.food_pos))
+        new_dist = self._get_dist_to_food(self.head)
         
         reward = self._evaluate_step(old_dist, new_dist)
-        
         self.last_reward = reward
         self.total_reward += reward
         
         return self.get_state(), reward, self.done
+
+    def _get_dist_to_food(self, point):
+        return np.linalg.norm(np.array(point) - np.array(self.food_pos))
 
     def _handle_events(self):
         for event in pygame.event.get():
@@ -62,17 +60,15 @@ class SnakeEnv:
                 sys.exit()
 
     def _update_direction(self, action):
-        clock_wise_directions = [0, 1, 2, 3] # UP, RIGHT, DOWN, LEFT
-        current_idx = clock_wise_directions.index(self.direction)
+        directions = [0, 1, 2, 3] # UP, RIGHT, DOWN, LEFT
+        idx = directions.index(self.direction)
 
         if np.array_equal(action, [1, 0, 0]): # Straight
-            new_direction = clock_wise_directions[current_idx]
-        elif np.array_equal(action, [0, 1, 0]): # Turn Right
-            new_direction = clock_wise_directions[(current_idx + 1) % 4]
-        else: # Turn Left
-            new_direction = clock_wise_directions[(current_idx - 1) % 4]
-            
-        self.direction = new_direction
+            self.direction = directions[idx]
+        elif np.array_equal(action, [0, 1, 0]): # Right Turn
+            self.direction = directions[(idx + 1) % 4]
+        else: # Left Turn
+            self.direction = directions[(idx - 1) % 4]
 
     def _move_snake(self):
         x, y = self.head
@@ -85,152 +81,93 @@ class SnakeEnv:
         self.snake_body.insert(0, self.head)
 
     def _evaluate_step(self, old_dist, new_dist):
-        if self.is_collision() or self._is_stuck_in_loop():
+        if self.is_collision() or self.frame_iteration > 100 * len(self.snake_body):
             self.done = True
             return -10
 
         if self.head == self.food_pos:
             self.score += 1
             self._place_food()
-            return 20 # Reward besar makan apel
+            return 10
         
         self.snake_body.pop()
         
-        # Reward Shaping: Berikan reward kecil jika mendekati apel
+        # Reward shaping: Encourage moving towards food
         if new_dist < old_dist:
             return 0.1
-        else:
-            return -0.2
+        return -0.2
 
-    def is_collision(self, point=None):
-        point = point if point else self.head
-        return self._hits_boundary(point) or self._hits_self(point)
-
-    def _hits_boundary(self, pt):
-        return pt[0] < 0 or pt[0] >= self.window_size or pt[1] < 0 or pt[1] >= self.window_size
-
-    def _hits_self(self, pt):
-        return pt in self.snake_body[1:]
-
-    def _is_stuck_in_loop(self):
-        # Beri limit lebih ketat agar tidak mutar-mutar
-        return self.frame_iteration > 100 * len(self.snake_body)
+    def is_collision(self, pt=None):
+        pt = pt if pt else self.head
+        if pt[0] < 0 or pt[0] >= self.window_size or pt[1] < 0 or pt[1] >= self.window_size:
+            return True
+        if pt in self.snake_body[1:]:
+            return True
+        return False
 
     def get_state(self):
         head = self.snake_body[0]
-        vision_obstacle, vision_apple = self._get_vision_features(head)
-        danger = self._get_danger_features(head)
         
+        # Points relative to head
+        point_l = [head[0] - self.cell_size, head[1]]
+        point_r = [head[0] + self.cell_size, head[1]]
+        point_u = [head[0], head[1] - self.cell_size]
+        point_d = [head[0], head[1] + self.cell_size]
+        
+        # Current directions
+        dir_l = self.direction == 3
+        dir_r = self.direction == 1
+        dir_u = self.direction == 0
+        dir_d = self.direction == 2
+
         state = [
-            *danger,
-            *self._get_direction_features(),
-            *self._get_food_relative_features(head),
-            *vision_obstacle,
-            *vision_apple,
-            *self._get_tail_relative_features(head)
-        ]
-        return np.array(state, dtype=float)
+            # Danger straight
+            (dir_r and self.is_collision(point_r)) or 
+            (dir_l and self.is_collision(point_l)) or 
+            (dir_u and self.is_collision(point_u)) or 
+            (dir_d and self.is_collision(point_d)),
 
-    def _get_danger_features(self, head):
-        adjacent_cells = [
-            (head[0], head[1] - self.cell_size), # Up
-            (head[0] + self.cell_size, head[1]), # Right
-            (head[0], head[1] + self.cell_size), # Down
-            (head[0] - self.cell_size, head[1])  # Left
-        ]
-        return [self.is_collision(pt) for pt in adjacent_cells]
+            # Danger right
+            (dir_u and self.is_collision(point_r)) or 
+            (dir_d and self.is_collision(point_l)) or 
+            (dir_l and self.is_collision(point_u)) or 
+            (dir_r and self.is_collision(point_d)),
 
-    def _get_direction_features(self):
-        return [self.direction == i for i in range(4)]
-
-    def _get_food_relative_features(self, head):
-        return [
-            self.food_pos[1] < head[1], # Food Up
-            self.food_pos[0] > head[0], # Food Right
-            self.food_pos[1] > head[1], # Food Down
-            self.food_pos[0] < head[0]  # Food Left
-        ]
-
-    def _get_tail_relative_features(self, head):
-        tail = self.snake_body[-1]
-        return [
-            tail[1] < head[1],
-            tail[0] > head[0],
-            tail[1] > head[1],
-            tail[0] < head[0]
-        ]
-
-    def _get_vision_features(self, head):
-        ray_directions = [
-            (0, -self.cell_size), (0, self.cell_size), (self.cell_size, 0), (-self.cell_size, 0),
-            (self.cell_size, -self.cell_size), (-self.cell_size, -self.cell_size),
-            (self.cell_size, self.cell_size), (-self.cell_size, self.cell_size)
-        ]
-        
-        vision_obstacle = []
-        vision_apple = []
-        for dx, dy in ray_directions:
-            obstacle_dist, apple_found = self._scan_direction(head, dx, dy)
-            vision_obstacle.append(obstacle_dist)
-            vision_apple.append(apple_found)
-        return vision_obstacle, vision_apple
-
-    def _scan_direction(self, head, dx, dy):
-        dist = 0
-        apple_found = 0
-        curr = [head[0] + dx, head[1] + dy]
-        
-        while not self._hits_boundary(curr):
-            dist += 1
-            if curr[0] == self.food_pos[0] and curr[1] == self.food_pos[1]:
-                apple_found = 1
-            if curr in self.snake_body[1:]:
-                break
-            curr[0] += dx
-            curr[1] += dy
+            # Danger left
+            (dir_d and self.is_collision(point_r)) or 
+            (dir_u and self.is_collision(point_l)) or 
+            (dir_r and self.is_collision(point_u)) or 
+            (dir_l and self.is_collision(point_d)),
             
-        is_diagonal = dx != 0 and dy != 0
-        factor = np.sqrt(2) if is_diagonal else 1.0
-        max_dist = self.grid_size * factor
-        return (dist * factor) / max_dist, apple_found
+            # Move direction
+            dir_l, dir_r, dir_u, dir_d,
+            
+            # Food location 
+            self.food_pos[0] < head[0],  # food left
+            self.food_pos[0] > head[0],  # food right
+            self.food_pos[1] < head[1],  # food up
+            self.food_pos[1] > head[1]   # food down
+        ]
+
+        return np.array(state, dtype=int)
 
     def render(self, n_games=0, record=0):
         self.screen.fill((0, 0, 0))
-        self._draw_grid()
-        self._draw_snake()
-        self._draw_food()
-        self._draw_ui(n_games, record)
+        for pos in self.snake_body:
+            pygame.draw.rect(self.screen, (0, 255, 0), (pos[0], pos[1], self.cell_size, self.cell_size))
+        pygame.draw.rect(self.screen, (255, 0, 0), (self.food_pos[0], self.food_pos[1], self.cell_size, self.cell_size))
+        
+        texts = [f"Game: {n_games}", f"Score: {self.score}", f"Record: {record}"]
+        for i, t in enumerate(texts):
+            self.screen.blit(self.font.render(t, True, (255,255,255)), (10, 10 + i*20))
+            
         pygame.display.flip()
         self.clock.tick(120)
 
-    def _draw_grid(self):
-        for i in range(0, self.window_size, self.cell_size):
-            pygame.draw.line(self.screen, (20, 20, 20), (i, 0), (i, self.window_size))
-            pygame.draw.line(self.screen, (20, 20, 20), (0, i), (self.window_size, i))
-
-    def _draw_snake(self):
-        for i, pos in enumerate(self.snake_body):
-            color = (0, 255, 0) if i == 0 else (0, 200, 0)
-            pygame.draw.rect(self.screen, color, (pos[0]+1, pos[1]+1, self.cell_size-2, self.cell_size-2))
-
-    def _draw_food(self):
-        pygame.draw.rect(self.screen, (255, 0, 0), (self.food_pos[0], self.food_pos[1], self.cell_size, self.cell_size))
-
-    def _draw_ui(self, n_games, record):
-        texts = [
-            f"Game: {n_games}",
-            f"Score: {self.score}",
-            f"Record: {record}",
-            f"Reward: {self.last_reward:.2f}"
-        ]
-        for i, text in enumerate(texts):
-            img = self.font.render(text, True, (255, 255, 255))
-            self.screen.blit(img, (10, 10 + i * 25))
-
     def _place_food(self):
         while True:
-            x = random.randint(0, self.grid_size - 1) * self.cell_size
-            y = random.randint(0, self.grid_size - 1) * self.cell_size
+            x = random.randint(0, self.grid_size-1) * self.cell_size
+            y = random.randint(0, self.grid_size-1) * self.cell_size
             self.food_pos = [x, y]
             if self.food_pos not in self.snake_body:
                 break

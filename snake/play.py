@@ -7,8 +7,8 @@ from model import Linear_QNet
 def play():
     game = SnakeEnv()
     
-    # 32 inputs to match the new vision logic
-    model = Linear_QNet(32, 256, 256, 3)
+    # 11 inputs for the simplified relative model
+    model = Linear_QNet(11, 256, 256, 3)
     
     model_dir = os.path.join(os.path.dirname(__file__), "model")
     file_path = os.path.join(model_dir, "model.pth")
