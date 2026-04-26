@@ -7,132 +7,86 @@ import random
 class SnakeEnv:
     def __init__(self):
         pygame.init()
-        self.window_size = 800
-        self.cell_size = 40
+        self.window_size = 600
+        self.cell_size = 60
         self.screen = pygame.display.set_mode((self.window_size, self.window_size))
-        pygame.display.set_caption("RL Playground - Snake")
+        pygame.display.set_caption("RL Snake - Dynamic Sensing")
         self.clock = pygame.time.Clock()
+        self.reset()
 
-        self.snake_body = [[400, 400], [360, 400], [320, 200]]
-        self.direction = 1
-        self.done = False
-        self._place_food()
+        # Tambahkan inisialisasi font
+        pygame.font.init()
+        self.font = pygame.font.SysFont("arial", 20)
+        self.last_reward = 0
 
     def reset(self):
-        self.snake_body = [[400, 400], [360, 400], [320, 200]]
         self.direction = 1
-        self.done = False
+        self.head = [self.window_size // 2, self.window_size // 2]
+        # Inisialisasi badan berdasarkan cell_size agar tidak tumpang tindih
+        self.snake_body = [
+            self.head,
+            [self.head[0] - self.cell_size, self.head[1]],
+            [self.head[0] - (2 * self.cell_size), self.head[1]],
+        ]
+        self.food_pos = [0, 0]
         self._place_food()
-
+        self.score = 0
+        self.total_reward = 0
+        self.done = False
+        self.frame_iteration = 0
         return self._get_state()
 
     def step(self, action):
+        self.frame_iteration += 1
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
 
-        # Mengambil posisi kepala saat ini
-        head_x, head_y = self.snake_body[0]
+        clock_wise = [0, 1, 2, 3]  # UP, RIGHT, DOWN, LEFT
+        idx = clock_wise.index(self.direction)
 
-        # Koordinat kepala baru berdasarkan action
-        if action == 0:
-            head_y -= self.cell_size  # Up
-        elif action == 1:
-            head_x += self.cell_size  # Right
-        elif action == 2:
-            head_y += self.cell_size  # Down
-        elif action == 3:
-            head_x -= self.cell_size  # Left
+        if np.array_equal(action, [1, 0, 0]):
+            new_dir = clock_wise[idx]
+        elif np.array_equal(action, [0, 1, 0]):
+            new_dir = clock_wise[(idx + 1) % 4]
+        else:
+            new_dir = clock_wise[(idx - 1) % 4]
 
-        new_head = [head_x, head_y]
+        self.direction = new_dir
+        x, y = self.head
+        if self.direction == 0:
+            y -= self.cell_size
+        elif self.direction == 1:
+            x += self.cell_size
+        elif self.direction == 2:
+            y += self.cell_size
+        elif self.direction == 3:
+            x -= self.cell_size
 
-        # Tambahkan kepala baru ke urutan list tubuh
-        self.snake_body.insert(0, new_head)
+        self.head = [x, y]
+        self.snake_body.insert(0, self.head)
 
-        reward = 0
+        reward = -0.05
+        if self._is_collision() or self.frame_iteration > 200 * len(self.snake_body):
+            self.done = True
+            reward = -10
 
-        # Cek apakah ular memakan apel
-        if head_x == self.food_pos[0] and head_y == self.food_pos[1]:
-            print("Ular makan apel di: ", self.food_pos)
-            reward = 10
+        elif self.head == self.food_pos:
+            reward = 50
+            self.score += 1
             self._place_food()
         else:
             self.snake_body.pop()
 
-        # Cek game Over
-        if (
-            head_x < 0
-            or head_x > self.window_size
-            or head_x < 0
-            or head_x > self.window_size
-        ):
-            self.done = True
-            reward = -15
+        self.total_reward += reward
+        self.last_reward = reward
 
         return self._get_state(), reward, self.done
 
-    def render(self):
-        self.screen.fill((0, 0, 0))  # Black background
-
-        for pos in self.snake_body:
-            pygame.draw.rect(
-                self.screen,
-                (0, 255, 0),
-                (pos[0], pos[1], self.cell_size, self.cell_size),
-            )
-
-        pygame.draw.rect(
-            self.screen,
-            (255, 0, 0),
-            (self.food_pos[0], self.food_pos[1], self.cell_size, self.cell_size),
-        )
-
-        pygame.display.flip()
-        self.clock.tick(10)
-
-    def _get_state(self):
-        head = self.snake_body[0]
-
-        # Titik-titik di sekitar kepala
-        point_l = [head[0] - self.cell_size, head[1]]
-        point_r = [head[0] + self.cell_size, head[1]]
-        point_u = [head[0], head[1] - self.cell_size]
-        point_d = [head[0], head[1] + self.cell_size]
-
-        # Cek arah mana yang sedang aktif
-        dirr_u = self.direction == 0
-        dirr_r = self.direction == 1
-        dirr_d = self.direction == 2
-        dirr_l = self.direction == 3
-
-        state = [
-            (dirr_r and self._is_collision(point_r))
-            or (dirr_d and self._is_collision(point_d))
-            or (dirr_l and self._is_collision(point_l))
-            or (dirr_u and self._is_collision(point_u)),
-            (dirr_r and self._is_collision(point_d))
-            or (dirr_d and self._is_collision(point_l))
-            or (dirr_l and self._is_collision(point_u))
-            or (dirr_u and self._is_collision(point_r)),
-            (dirr_r and self._is_collision(point_u))
-            or (dirr_d and self._is_collision(point_r))
-            or (dirr_l and self._is_collision(point_d))
-            or (dirr_u and self._is_collision(point_l)),
-            dirr_r,
-            dirr_d,
-            dirr_l,
-            dirr_u,
-            # Lokasi makanan relatif terhadap kepala
-            self.food_pos[0] < head[0],
-            self.food_pos[0] > head[0],
-            self.food_pos[1] < head[1],
-            self.food_pos[1] > head[1],
-        ]
-
-        return np.array(state, dtype=int)
-
-    def _is_collision(self, pt):
+    def _is_collision(self, pt=None):
+        if pt is None:
+            pt = self.head
         if (
             pt[0] < 0
             or pt[0] >= self.window_size
@@ -144,23 +98,85 @@ class SnakeEnv:
             return True
         return False
 
+    def _get_state(self):
+        head = self.snake_body[0]
+
+        # Arah Scan: N, S, E, W, NE, NW, SE, SW
+        directions = [
+            (0, -self.cell_size),
+            (0, self.cell_size),
+            (self.cell_size, 0),
+            (-self.cell_size, 0),
+            (self.cell_size, -self.cell_size),
+            (-self.cell_size, -self.cell_size),
+            (self.cell_size, self.cell_size),
+            (-self.cell_size, self.cell_size),
+        ]
+
+        vision = []
+        for dx, dy in directions:
+            dist = 0
+            curr = [head[0] + dx, head[1] + dy]
+            # Scan sampai mentok tembok atau badan sendiri
+            while 0 <= curr[0] < self.window_size and 0 <= curr[1] < self.window_size:
+                dist += 1
+                if curr in self.snake_body[1:]:
+                    break
+                curr[0] += dx
+                curr[1] += dy
+            # Normalisasi jarak (0 sampai 1) agar otak AI tidak bingung
+            vision.append(dist / (self.window_size / self.cell_size))
+
+        state = [
+            # 1-3: Bahaya Instan (Tetap pakai yang lama buat proteksi cepat)
+            self._is_collision([head[0], head[1] - self.cell_size]),  # Bahaya Atas
+            self._is_collision([head[0] + self.cell_size, head[1]]),  # Bahaya Kanan
+            self._is_collision([head[0], head[1] + self.cell_size]),  # Bahaya Bawah
+            self._is_collision([head[0] - self.cell_size, head[1]]),  # Bahaya Kiri
+            # 5-8: Arah Jalan
+            self.direction == 0,  # UP
+            self.direction == 1,  # RIGHT
+            self.direction == 2,  # DOWN
+            self.direction == 3,  # LEFT
+            # 9-12: Lokasi Apel relatif
+            self.food_pos[1] < head[1],  # Food Up
+            self.food_pos[0] > head[0],  # Food Right
+            self.food_pos[1] > head[1],  # Food Down
+            self.food_pos[0] < head[0],  # Food Left
+            # 13-20: Vision Sensors (Jarak ke rintangan di 8 arah)
+            *vision,
+            # 21-24: Lokasi Ekor (Penting buat hindari jebakan badan sendiri)
+            self.snake_body[-1][1] < head[1],
+            self.snake_body[-1][0] > head[0],
+            self.snake_body[-1][1] > head[1],
+            self.snake_body[-1][0] < head[0],
+        ]
+        return np.array(state, dtype=float)
+
+    def render(self):
+        self.screen.fill((0, 0, 0))
+        for pos in self.snake_body:
+            pygame.draw.rect(
+                self.screen,
+                (0, 255, 0),
+                (pos[0], pos[1], self.cell_size - 2, self.cell_size - 2),
+            )
+        pygame.draw.rect(
+            self.screen,
+            (255, 0, 0),
+            (self.food_pos[0], self.food_pos[1], self.cell_size, self.cell_size),
+        )
+
+        reward_text = self.font.render(
+            f"Total Reward: {self.total_reward:.2f}", True, (255, 255, 255)
+        )
+
+        self.screen.blit(reward_text, [10, 35])
+
+        pygame.display.flip()
+        self.clock.tick(1000)
+
     def _place_food(self):
         x = random.randint(0, (self.window_size // self.cell_size) - 1) * self.cell_size
         y = random.randint(0, (self.window_size // self.cell_size) - 1) * self.cell_size
-
         self.food_pos = [x, y]
-
-
-if __name__ == "__main__":
-    env = SnakeEnv()
-    state = env.reset()
-
-    while not env.done:
-        action = np.random.randint(0, 4)
-        next_state, reward, done = env.step(action)
-        env.render()
-
-        if done:
-            print("Game Over!")
-            pygame.quit()
-            break

@@ -12,7 +12,7 @@ Teaching an agent to play Snake using Q-learning.
 - [x] Initial State, Action, and Reward implementation
 - [x] Food spawning system
 - [x] Snake growth and body logic
-- [ ] Integrate with Reinforcement Learning algorithms (Q-Learning/DQN)
+- [x] Integrate with Reinforcement Learning algorithms (Q-Learning/DQN)
 
 ## How to Run
 
