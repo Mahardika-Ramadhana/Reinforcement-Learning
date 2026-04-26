@@ -67,13 +67,13 @@ class SnakeEnv:
         self.head = [x, y]
         self.snake_body.insert(0, self.head)
 
-        reward = -0.01
+        reward = -0.02 # Sedikit naikkan penalty agar tidak mutar-mutar
         if self._is_collision() or self.frame_iteration > 200 * len(self.snake_body):
             self.done = True
             reward = -10
 
         elif self.head == self.food_pos:
-            reward = 10
+            reward = 20 # Naikkan dari 10 ke 20
             self.score += 1
             self._place_food()
         else:

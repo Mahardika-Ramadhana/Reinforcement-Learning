@@ -1,24 +1,28 @@
 import matplotlib.pyplot as plt
-from IPython import display
 import os
 
+# Set mode interaktif agar plot tidak menghentikan eksekusi kode
 plt.ion()
 
 def plot(scores, mean_scores):
-    display.clear_output(wait=True)
-    display.display(plt.gcf())
     plt.clf()
     plt.title('Training Progress')
     plt.xlabel('Number of Games')
     plt.ylabel('Score')
-    plt.plot(scores, label='Score')
-    plt.plot(mean_scores, label='Mean Score')
+    
+    plt.plot(scores, label='Score', color='blue', alpha=0.5)
+    plt.plot(mean_scores, label='Mean Score', color='red', linewidth=2)
+    
     plt.ylim(ymin=0)
-    plt.text(len(scores)-1, scores[-1], str(scores[-1]))
-    plt.text(len(mean_scores)-1, mean_scores[-1], str(mean_scores[-1]))
+    
+    # Tampilkan teks skor terakhir
+    if len(scores) > 0:
+        plt.text(len(scores)-1, scores[-1], str(scores[-1]))
+        plt.text(len(mean_scores)-1, mean_scores[-1], f"{mean_scores[-1]:.2f}")
+    
     plt.legend()
-    plt.show(block=False)
-    plt.pause(.1)
+    plt.draw()
+    plt.pause(0.1)
     
     # Simpan sebagai gambar untuk LinkedIn
     if not os.path.exists("./plots"):

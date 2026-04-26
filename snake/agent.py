@@ -11,11 +11,11 @@ class Agent:
     def __init__(self):
         self.n_games = 0
         self.epsilon = 0  # Randomness
-        self.gamma = 0.9  # Discount rate
-        self.memory = deque(maxlen=100_000)  # Experience Replay Buffer
+        self.gamma = 0.98  # Lebih peduli masa depan
+        self.memory = deque(maxlen=100_000)
         self.model = Linear_QNet(24, 256, 256, 3)
         self.model.to_device()
-        self.trainer = QTrainer(self.model, lr=0.001, gamma=self.gamma)
+        self.trainer = QTrainer(self.model, lr=0.0005, gamma=self.gamma) # Stabil
         self.record = 0
         
         # Load Checkpoint jika ada
@@ -43,9 +43,8 @@ class Agent:
         self.trainer.train_step(states, actions, rewards, next_states, dones)
 
     def get_action(self, state):
-        # EPSILON DECAY: Decay based on n_games
-        # Start high exploration, then transition to exploitation
-        self.epsilon = max(10, 150 - self.n_games) 
+        # EPSILON DECAY: AI mengeksplorasi lebih lama sampai sekitar 500 games
+        self.epsilon = max(5, 180 - (self.n_games / 3)) 
         final_move = [0, 0, 0]
         if random.randint(0, 200) < self.epsilon:
             move = random.randint(0, 2)
