@@ -2,4 +2,3 @@ venv/
 __pycache__/
 *.pyc
 .env
-# model/  # Uncomment if you want to keep models local only
