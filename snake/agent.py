@@ -21,7 +21,8 @@ class Agent:
         self.target_model.to_device()
         self.sync_target_model()
         
-        self.trainer = QTrainer(self.model, lr=0.0005, gamma=self.gamma, target_model=self.target_model)
+        # Adjusted Learning Rate to 0.001 for faster initial learning
+        self.trainer = QTrainer(self.model, lr=0.001, gamma=self.gamma, target_model=self.target_model)
         
         self._load_checkpoint()
 
@@ -38,7 +39,8 @@ class Agent:
             self.sync_target_model()
 
     def get_action(self, state):
-        self.epsilon = max(5, 180 - (self.n_games / 3))
+        # Faster epsilon decay to start exploiting the model sooner
+        self.epsilon = max(5, 100 - self.n_games)
         
         if random.randint(0, 200) < self.epsilon:
             return self._get_random_move()

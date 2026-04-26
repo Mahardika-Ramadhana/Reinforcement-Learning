@@ -101,7 +101,7 @@ class SnakeEnv:
         return pt in self.snake_body[1:]
 
     def _is_stuck_in_loop(self):
-        return self.frame_iteration > 100 * len(self.snake_body)
+        return self.frame_iteration > 200 * len(self.snake_body)
 
     def get_state(self):
         head = self.snake_body[0]
