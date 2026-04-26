@@ -14,15 +14,15 @@ class Agent:
         self.memory = deque(maxlen=100_000)
         self.record = 0
         
-        # 11 inputs state
-        self.model = Linear_QNet(11, 256, 256, 3)
+        # 404 inputs (400 grid + 4 direction)
+        self.model = Linear_QNet(404, 512, 256, 3) # Increased hidden size for more complex state
         self.model.to_device()
         
-        self.target_model = Linear_QNet(11, 256, 256, 3)
+        self.target_model = Linear_QNet(404, 512, 256, 3)
         self.target_model.to_device()
         self.sync_target_model()
         
-        self.trainer = QTrainer(self.model, lr=0.001, gamma=self.gamma, target_model=self.target_model)
+        self.trainer = QTrainer(self.model, lr=0.0005, gamma=self.gamma, target_model=self.target_model)
         
         self._load_checkpoint()
 
@@ -41,8 +41,7 @@ class Agent:
             print(f"Resuming from Game: {self.n_games}, Record: {self.record}")
 
     def get_action(self, state):
-        # High exploration for longer time (starts at 100% random for first 200 games)
-        self.epsilon = max(10, 200 - self.n_games)
+        self.epsilon = max(10, 150 - self.n_games) # Slower decay for complex state
         
         if random.randint(0, 200) < self.epsilon:
             return self._get_random_move()
@@ -66,7 +65,7 @@ class Agent:
         self.memory.append((state, action, reward, next_state, done))
 
     def train_long_memory(self):
-        batch = random.sample(self.memory, 1000) if len(self.memory) > 1000 else self.memory
+        batch = random.sample(self.memory, 2000) if len(self.memory) > 2000 else self.memory
         states, actions, rewards, next_states, dones = zip(*batch)
         self.trainer.train_step(states, actions, rewards, next_states, dones)
 

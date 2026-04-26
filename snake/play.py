@@ -7,8 +7,8 @@ from model import Linear_QNet
 def play():
     game = SnakeEnv()
     
-    # 11 inputs for the simplified relative model
-    model = Linear_QNet(11, 256, 256, 3)
+    # 404 inputs to match Temporal Grid Vision
+    model = Linear_QNet(404, 512, 256, 3)
     
     model_dir = os.path.join(os.path.dirname(__file__), "model")
     file_path = os.path.join(model_dir, "model.pth")
