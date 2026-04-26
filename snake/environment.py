@@ -13,7 +13,7 @@ class SnakeEnv:
         self.grid_size = self.window_size // self.cell_size
         
         self.screen = pygame.display.set_mode((self.window_size, self.window_size))
-        pygame.display.set_caption("RL Snake AI - Relative Perception")
+        pygame.display.set_caption("RL Snake AI - Ultimate Relative")
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont("arial", 20)
         
@@ -88,11 +88,11 @@ class SnakeEnv:
         if self.head == self.food_pos:
             self.score += 1
             self._place_food()
-            return 10
+            return 20 # High reward for food
         
         self.snake_body.pop()
         
-        # Reward shaping: Encourage moving towards food
+        # Aggressive Reward Shaping
         if new_dist < old_dist:
             return 0.1
         return -0.2
@@ -108,45 +108,43 @@ class SnakeEnv:
     def get_state(self):
         head = self.snake_body[0]
         
-        # Points relative to head
-        point_l = [head[0] - self.cell_size, head[1]]
-        point_r = [head[0] + self.cell_size, head[1]]
-        point_u = [head[0], head[1] - self.cell_size]
-        point_d = [head[0], head[1] + self.cell_size]
-        
-        # Current directions
-        dir_l = self.direction == 3
-        dir_r = self.direction == 1
+        # Directions: UP, RIGHT, DOWN, LEFT
+        # Food Relative logic
+        food_left = self.food_pos[0] < head[0]
+        food_right = self.food_pos[0] > head[0]
+        food_up = self.food_pos[1] < head[1]
+        food_down = self.food_pos[1] > head[1]
+
+        # Points around head
+        pt_u = [head[0], head[1] - self.cell_size]
+        pt_d = [head[0], head[1] + self.cell_size]
+        pt_l = [head[0] - self.cell_size, head[1]]
+        pt_r = [head[0] + self.cell_size, head[1]]
+
+        # Current direction one-hot
         dir_u = self.direction == 0
+        dir_r = self.direction == 1
         dir_d = self.direction == 2
+        dir_l = self.direction == 3
 
         state = [
             # Danger straight
-            (dir_r and self.is_collision(point_r)) or 
-            (dir_l and self.is_collision(point_l)) or 
-            (dir_u and self.is_collision(point_u)) or 
-            (dir_d and self.is_collision(point_d)),
+            (dir_r and self.is_collision(pt_r)) or (dir_l and self.is_collision(pt_l)) or 
+            (dir_u and self.is_collision(pt_u)) or (dir_d and self.is_collision(pt_d)),
 
             # Danger right
-            (dir_u and self.is_collision(point_r)) or 
-            (dir_d and self.is_collision(point_l)) or 
-            (dir_l and self.is_collision(point_u)) or 
-            (dir_r and self.is_collision(point_d)),
+            (dir_u and self.is_collision(pt_r)) or (dir_d and self.is_collision(pt_l)) or 
+            (dir_l and self.is_collision(pt_u)) or (dir_r and self.is_collision(pt_d)),
 
             # Danger left
-            (dir_d and self.is_collision(point_r)) or 
-            (dir_u and self.is_collision(point_l)) or 
-            (dir_r and self.is_collision(point_u)) or 
-            (dir_l and self.is_collision(point_d)),
+            (dir_d and self.is_collision(pt_r)) or (dir_u and self.is_collision(pt_l)) or 
+            (dir_r and self.is_collision(pt_u)) or (dir_l and self.is_collision(pt_d)),
             
-            # Move direction
+            # Direction
             dir_l, dir_r, dir_u, dir_d,
             
-            # Food location 
-            self.food_pos[0] < head[0],  # food left
-            self.food_pos[0] > head[0],  # food right
-            self.food_pos[1] < head[1],  # food up
-            self.food_pos[1] > head[1]   # food down
+            # Food
+            food_left, food_right, food_up, food_down
         ]
 
         return np.array(state, dtype=int)
@@ -162,7 +160,7 @@ class SnakeEnv:
             self.screen.blit(self.font.render(t, True, (255,255,255)), (10, 10 + i*20))
             
         pygame.display.flip()
-        self.clock.tick(120)
+        self.clock.tick(1000) # Maximum training speed
 
     def _place_food(self):
         while True:

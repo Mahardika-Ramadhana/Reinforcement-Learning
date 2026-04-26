@@ -10,11 +10,11 @@ class Agent:
     def __init__(self):
         self.n_games = 0
         self.epsilon = 0
-        self.gamma = 0.95 # Slightly lower for faster grid 20x20 convergence
+        self.gamma = 0.95
         self.memory = deque(maxlen=100_000)
         self.record = 0
         
-        # 11 inputs: 3 (Danger) + 4 (Direction) + 4 (Food)
+        # 11 inputs state
         self.model = Linear_QNet(11, 256, 256, 3)
         self.model.to_device()
         
@@ -41,7 +41,8 @@ class Agent:
             print(f"Resuming from Game: {self.n_games}, Record: {self.record}")
 
     def get_action(self, state):
-        self.epsilon = max(0, 80 - self.n_games)
+        # High exploration for longer time (starts at 100% random for first 200 games)
+        self.epsilon = max(10, 200 - self.n_games)
         
         if random.randint(0, 200) < self.epsilon:
             return self._get_random_move()
@@ -100,7 +101,7 @@ def train():
                 agent.record = final_score
                 agent.model.save(agent.n_games, agent.record)
 
-            print(f"Game {agent.n_games} | Score: {final_score} | Record: {agent.record}")
+            print(f"Game {agent.n_games} | Score: {final_score} | Record: {agent.record} | Epsilon: {agent.epsilon}")
             
             plot_scores.append(final_score)
             total_score += final_score
