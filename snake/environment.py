@@ -39,10 +39,17 @@ class SnakeEnv:
         self.frame_iteration += 1
         self._handle_events()
         
+        # Simpan jarak lama ke apel
+        old_dist = np.linalg.norm(np.array(self.head) - np.array(self.food_pos))
+        
         self._update_direction(action)
         self._move_snake()
         
-        reward = self._evaluate_step()
+        # Hitung jarak baru
+        new_dist = np.linalg.norm(np.array(self.head) - np.array(self.food_pos))
+        
+        reward = self._evaluate_step(old_dist, new_dist)
+        
         self.last_reward = reward
         self.total_reward += reward
         
@@ -77,7 +84,7 @@ class SnakeEnv:
         self.head = [x, y]
         self.snake_body.insert(0, self.head)
 
-    def _evaluate_step(self):
+    def _evaluate_step(self, old_dist, new_dist):
         if self.is_collision() or self._is_stuck_in_loop():
             self.done = True
             return -10
@@ -85,10 +92,15 @@ class SnakeEnv:
         if self.head == self.food_pos:
             self.score += 1
             self._place_food()
-            return 20
+            return 20 # Reward besar makan apel
         
         self.snake_body.pop()
-        return -0.01 # Slightly lower penalty to encourage longer survival
+        
+        # Reward Shaping: Berikan reward kecil jika mendekati apel
+        if new_dist < old_dist:
+            return 0.1
+        else:
+            return -0.2
 
     def is_collision(self, point=None):
         point = point if point else self.head
@@ -101,7 +113,8 @@ class SnakeEnv:
         return pt in self.snake_body[1:]
 
     def _is_stuck_in_loop(self):
-        return self.frame_iteration > 200 * len(self.snake_body)
+        # Beri limit lebih ketat agar tidak mutar-mutar
+        return self.frame_iteration > 100 * len(self.snake_body)
 
     def get_state(self):
         head = self.snake_body[0]
@@ -169,7 +182,7 @@ class SnakeEnv:
         
         while not self._hits_boundary(curr):
             dist += 1
-            if curr == self.food_pos:
+            if curr[0] == self.food_pos[0] and curr[1] == self.food_pos[1]:
                 apple_found = 1
             if curr in self.snake_body[1:]:
                 break

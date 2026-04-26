@@ -30,13 +30,15 @@ class Agent:
         self.target_model.load_state_dict(self.model.state_dict())
 
     def _load_checkpoint(self):
-        file_path = "./model/model.pth"
+        model_dir = os.path.join(os.path.dirname(__file__), "model")
+        file_path = os.path.join(model_dir, "model.pth")
         if os.path.exists(file_path):
             checkpoint = torch.load(file_path, map_location=self.model.device)
             self.model.load_state_dict(checkpoint['model_state_dict'])
             self.n_games = checkpoint['n_games']
             self.record = checkpoint['record']
             self.sync_target_model()
+            print(f"Resuming from Game: {self.n_games}, Record: {self.record}")
 
     def get_action(self, state):
         # Slower epsilon decay for 20x20 grid

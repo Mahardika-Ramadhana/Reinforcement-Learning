@@ -20,7 +20,7 @@ def plot(scores, mean_scores):
     _save_plot()
 
 def _save_plot():
-    plot_directory = "./plots"
+    plot_directory = os.path.join(os.path.dirname(__file__), "plots")
     if not os.path.exists(plot_directory):
         os.makedirs(plot_directory)
     plt.savefig(os.path.join(plot_directory, "training_progress.png"))

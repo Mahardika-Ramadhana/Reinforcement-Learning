@@ -1,5 +1,6 @@
 import torch
 import time
+import os
 from environment import SnakeEnv
 from model import Linear_QNet
 
@@ -8,7 +9,15 @@ def play():
     
     # 32 inputs to match the new vision logic
     model = Linear_QNet(32, 256, 256, 3)
-    checkpoint = torch.load("model/model.pth", map_location=model.device)
+    
+    model_dir = os.path.join(os.path.dirname(__file__), "model")
+    file_path = os.path.join(model_dir, "model.pth")
+    
+    if not os.path.exists(file_path):
+        print("No model found. Please train the AI first.")
+        return
+
+    checkpoint = torch.load(file_path, map_location=model.device)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.to_device()
     model.eval()

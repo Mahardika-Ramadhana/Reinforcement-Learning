@@ -22,7 +22,7 @@ class Linear_QNet(nn.Module):
         self.to(self.device)
 
     def save(self, n_games, record, file_name="model.pth"):
-        model_directory = "./model"
+        model_directory = os.path.join(os.path.dirname(__file__), "model")
         if not os.path.exists(model_directory):
             os.makedirs(model_directory)
         
