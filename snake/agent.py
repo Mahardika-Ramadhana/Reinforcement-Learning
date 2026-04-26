@@ -87,21 +87,24 @@ def train():
         agent.remember(old_state, action, reward, new_state, done)
 
         if done:
+            # Capture score BEFORE resetting the game
+            final_score = game.score
             game.reset()
+            
             agent.n_games += 1
             agent.train_long_memory()
 
             if agent.n_games % 10 == 0:
                 agent.sync_target_model()
 
-            if game.score > agent.record:
-                agent.record = game.score
+            if final_score > agent.record:
+                agent.record = final_score
                 agent.model.save(agent.n_games, agent.record)
 
-            print(f"Game {agent.n_games} | Score: {game.score} | Record: {agent.record}")
+            print(f"Game {agent.n_games} | Score: {final_score} | Record: {agent.record}")
             
-            plot_scores.append(game.score)
-            total_score += game.score
+            plot_scores.append(final_score)
+            total_score += final_score
             plot_mean_scores.append(total_score / agent.n_games)
             plot(plot_scores, plot_mean_scores)
 
