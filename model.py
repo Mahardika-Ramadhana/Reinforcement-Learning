@@ -60,13 +60,16 @@ class QTrainer:
         pred = self.model(state)
 
         target = pred.clone()
+        
+        # Hitung Q-value untuk state berikutnya dalam satu batch
+        with torch.no_grad():
+            next_pred = self.model(next_state)
+            
         for idx in range(len(done)):
             Q_new = reward[idx]
             if not done[idx]:
                 # IMPLEMENTASI BELLMAN EQUATION: Q_new = R + gamma * max(next_Q)
-                Q_new = reward[idx] + self.gamma * torch.max(
-                    self.model(next_state[idx])
-                )
+                Q_new = reward[idx] + self.gamma * torch.max(next_pred[idx])
 
             # Update target untuk aksi yang diambil
             target[idx][torch.argmax(action[idx]).item()] = Q_new

@@ -56,6 +56,6 @@ The agent "sees" the environment through a 24-dimensional state vector:
 3. Activate the environment:
    `source venv/bin/activate`
 4. Install dependencies:
-   `pip install torch pygame numpy`
+   `pip install -r requirements.txt`
 5. Run the training:
    `python3 agent.py`

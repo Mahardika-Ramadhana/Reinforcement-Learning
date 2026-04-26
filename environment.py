@@ -127,12 +127,18 @@ class SnakeEnv:
             # Normalisasi jarak (0 sampai 1) agar otak AI tidak bingung
             vision.append(dist / (self.window_size / self.cell_size))
 
+        # 1-4: Bahaya Instan (Up, Right, Down, Left)
+        danger_directions = [
+            (head[0], head[1] - self.cell_size),  # Up
+            (head[0] + self.cell_size, head[1]),  # Right
+            (head[0], head[1] + self.cell_size),  # Down
+            (head[0] - self.cell_size, head[1]),  # Left
+        ]
+        danger = [self._is_collision(pt) for pt in danger_directions]
+
         state = [
-            # 1-3: Bahaya Instan (Tetap pakai yang lama buat proteksi cepat)
-            self._is_collision([head[0], head[1] - self.cell_size]),  # Bahaya Atas
-            self._is_collision([head[0] + self.cell_size, head[1]]),  # Bahaya Kanan
-            self._is_collision([head[0], head[1] + self.cell_size]),  # Bahaya Bawah
-            self._is_collision([head[0] - self.cell_size, head[1]]),  # Bahaya Kiri
+            # 1-4: Bahaya Instan
+            *danger,
             # 5-8: Arah Jalan
             self.direction == 0,  # UP
             self.direction == 1,  # RIGHT
