@@ -49,13 +49,9 @@ The agent "sees" the environment through a 24-dimensional state vector:
 
 ## How to Run
 
-1. Clone this repository:
-   `git clone https://github.com/Mahardika-Ramadhana/Reinforcement-Learning`
-2. Create a virtual environment:
-   `python3 -m venv venv`
-3. Activate the environment:
-   `source venv/bin/activate`
-4. Install dependencies:
-   `pip install -r requirements.txt`
-5. Run the training:
+1. Navigate to this folder: `cd snake`
+2. Install dependencies: `pip install -r requirements.txt`
+3. **To Train the AI:**
    `python3 agent.py`
+4. **To Watch the Trained AI Play:**
+   `python3 play.py` (Make sure `model/model.pth` exists)
