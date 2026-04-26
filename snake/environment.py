@@ -165,13 +165,20 @@ class SnakeEnv:
         ]
         return np.array(state, dtype=float)
 
-    def render(self):
+    def render(self, n_games=0, record=0):
         self.screen.fill((0, 0, 0))
+        
+        # Gambar Grid (Opsional: membantu visualisasi di LinkedIn)
+        for x in range(0, self.window_size, self.cell_size):
+            pygame.draw.line(self.screen, (30, 30, 30), (x, 0), (x, self.window_size))
+        for y in range(0, self.window_size, self.cell_size):
+            pygame.draw.line(self.screen, (30, 30, 30), (0, y), (self.window_size, y))
+
         for pos in self.snake_body:
             pygame.draw.rect(
                 self.screen,
                 (0, 255, 0),
-                (pos[0], pos[1], self.cell_size - 2, self.cell_size - 2),
+                (pos[0] + 1, pos[1] + 1, self.cell_size - 2, self.cell_size - 2),
             )
         pygame.draw.rect(
             self.screen,
@@ -179,14 +186,19 @@ class SnakeEnv:
             (self.food_pos[0], self.food_pos[1], self.cell_size, self.cell_size),
         )
 
-        reward_text = self.font.render(
-            f"Score: {self.score} | Total Reward: {self.total_reward:.2f}", True, (255, 255, 255)
-        )
+        # UI Overlay
+        score_text = self.font.render(f"Score: {self.score}", True, (255, 255, 255))
+        record_text = self.font.render(f"Record: {record}", True, (255, 255, 255))
+        game_text = self.font.render(f"Game: {n_games}", True, (255, 255, 255))
+        reward_text = self.font.render(f"Reward: {self.last_reward:.2f}", True, (200, 200, 200))
 
-        self.screen.blit(reward_text, [10, 35])
+        self.screen.blit(game_text, [10, 10])
+        self.screen.blit(score_text, [10, 35])
+        self.screen.blit(record_text, [10, 60])
+        self.screen.blit(reward_text, [10, 85])
 
         pygame.display.flip()
-        self.clock.tick(1000)
+        self.clock.tick(120) # Default speed, can be increased in agent.py
 
     def _place_food(self):
         x = random.randint(0, (self.window_size // self.cell_size) - 1) * self.cell_size

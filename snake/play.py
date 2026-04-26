@@ -28,7 +28,7 @@ def play():
         final_move[move_idx] = 1
     
         _, _, done = game.step(final_move)
-        game.render()
+        game.render(n_games=checkpoint['n_games'], record=checkpoint['record'])
         
         time.sleep(0.05) 
         

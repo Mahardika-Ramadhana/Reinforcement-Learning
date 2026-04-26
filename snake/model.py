@@ -40,8 +40,9 @@ class Linear_QNet(nn.Module):
 
 
 class QTrainer:
-    def __init__(self, model, lr, gamma):
+    def __init__(self, model, lr, gamma, target_model=None):
         self.model = model
+        self.target_model = target_model if target_model else model
         self.lr = lr
         self.gamma = gamma
         self.optimizer = optim.Adam(model.parameters(), lr=self.lr)
@@ -64,23 +65,20 @@ class QTrainer:
             reward = torch.unsqueeze(reward, 0)
             done = torch.unsqueeze(done, 0)
 
-        # 1. Prediksi Q-value saat ini
+        # 1. Prediksi Q-value saat ini dengan model utama
         pred = self.model(state)
 
         # 2. Hitung target Q-value
         target = pred.clone()
         
-        # Hitung Q-value untuk state berikutnya dalam satu batch
+        # 3. Gunakan target_model untuk prediksi masa depan (agar target tidak labil)
         with torch.no_grad():
-            next_pred = self.model(next_state)
+            next_pred = self.target_model(next_state)
             
-        # BELLMAN EQUATION: Q_new = R + gamma * max(next_Q) * (1 - done)
-        # Jika done=1, maka Q_new cuma Reward (tidak ada masa depan)
         max_next_q = torch.max(next_pred, dim=1)[0]
         Q_new = reward + (1 - done) * self.gamma * max_next_q
 
         # Update target hanya untuk aksi yang diambil
-        # action is one-hot [batch_size, 3], so argmax gives the index
         action_indices = torch.argmax(action, dim=1)
         batch_indices = torch.arange(len(done)).to(self.model.device)
         target[batch_indices, action_indices] = Q_new
