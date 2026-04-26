@@ -92,7 +92,57 @@ class SnakeEnv:
         self.clock.tick(10)
 
     def _get_state(self):
-        return np.array(self.snake_body[0])
+        head = self.snake_body[0]
+
+        # Titik-titik di sekitar kepala
+        point_l = [head[0] - self.cell_size, head[1]]
+        point_r = [head[0] + self.cell_size, head[1]]
+        point_u = [head[0], head[1] - self.cell_size]
+        point_d = [head[0], head[1] + self.cell_size]
+
+        # Cek arah mana yang sedang aktif
+        dirr_u = self.direction == 0
+        dirr_r = self.direction == 1
+        dirr_d = self.direction == 2
+        dirr_l = self.direction == 3
+
+        state = [
+            (dirr_r and self._is_collision(point_r))
+            or (dirr_d and self._is_collision(point_d))
+            or (dirr_l and self._is_collision(point_l))
+            or (dirr_u and self._is_collision(point_u)),
+            (dirr_r and self._is_collision(point_d))
+            or (dirr_d and self._is_collision(point_l))
+            or (dirr_l and self._is_collision(point_u))
+            or (dirr_u and self._is_collision(point_r)),
+            (dirr_r and self._is_collision(point_u))
+            or (dirr_d and self._is_collision(point_r))
+            or (dirr_l and self._is_collision(point_d))
+            or (dirr_u and self._is_collision(point_l)),
+            dirr_r,
+            dirr_d,
+            dirr_l,
+            dirr_u,
+            # Lokasi makanan relatif terhadap kepala
+            self.food_pos[0] < head[0],
+            self.food_pos[0] > head[0],
+            self.food_pos[1] < head[1],
+            self.food_pos[1] > head[1],
+        ]
+
+        return np.array(state, dtype=int)
+
+    def _is_collision(self, pt):
+        if (
+            pt[0] < 0
+            or pt[0] >= self.window_size
+            or pt[1] < 0
+            or pt[1] >= self.window_size
+        ):
+            return True
+        if pt in self.snake_body[1:]:
+            return True
+        return False
 
     def _place_food(self):
         x = random.randint(0, (self.window_size // self.cell_size) - 1) * self.cell_size
