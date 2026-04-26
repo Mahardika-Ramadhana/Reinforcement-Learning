@@ -14,14 +14,14 @@ class Agent:
         self.memory = deque(maxlen=100_000)
         self.record = 0
         
-        self.model = Linear_QNet(24, 256, 256, 3)
+        # Total inputs: 4 (danger) + 4 (direction) + 4 (food rel) + 8 (vision obs) + 8 (vision apple) + 4 (tail rel) = 32
+        self.model = Linear_QNet(32, 256, 256, 3)
         self.model.to_device()
         
-        self.target_model = Linear_QNet(24, 256, 256, 3)
+        self.target_model = Linear_QNet(32, 256, 256, 3)
         self.target_model.to_device()
         self.sync_target_model()
         
-        # Adjusted Learning Rate to 0.001 for faster initial learning
         self.trainer = QTrainer(self.model, lr=0.001, gamma=self.gamma, target_model=self.target_model)
         
         self._load_checkpoint()
@@ -39,8 +39,8 @@ class Agent:
             self.sync_target_model()
 
     def get_action(self, state):
-        # Faster epsilon decay to start exploiting the model sooner
-        self.epsilon = max(5, 100 - self.n_games)
+        # Slower epsilon decay for 20x20 grid
+        self.epsilon = max(10, 100 - (self.n_games / 2))
         
         if random.randint(0, 200) < self.epsilon:
             return self._get_random_move()

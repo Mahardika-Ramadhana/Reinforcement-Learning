@@ -88,7 +88,7 @@ class SnakeEnv:
             return 20
         
         self.snake_body.pop()
-        return -0.02
+        return -0.01 # Slightly lower penalty to encourage longer survival
 
     def is_collision(self, point=None):
         point = point if point else self.head
@@ -105,14 +105,15 @@ class SnakeEnv:
 
     def get_state(self):
         head = self.snake_body[0]
-        vision = self._get_vision_features(head)
+        vision_obstacle, vision_apple = self._get_vision_features(head)
         danger = self._get_danger_features(head)
         
         state = [
             *danger,
             *self._get_direction_features(),
             *self._get_food_relative_features(head),
-            *vision,
+            *vision_obstacle,
+            *vision_apple,
             *self._get_tail_relative_features(head)
         ]
         return np.array(state, dtype=float)
@@ -153,24 +154,32 @@ class SnakeEnv:
             (self.cell_size, self.cell_size), (-self.cell_size, self.cell_size)
         ]
         
-        vision = []
+        vision_obstacle = []
+        vision_apple = []
         for dx, dy in ray_directions:
-            vision.append(self._scan_direction(head, dx, dy))
-        return vision
+            obstacle_dist, apple_found = self._scan_direction(head, dx, dy)
+            vision_obstacle.append(obstacle_dist)
+            vision_apple.append(apple_found)
+        return vision_obstacle, vision_apple
 
     def _scan_direction(self, head, dx, dy):
         dist = 0
+        apple_found = 0
         curr = [head[0] + dx, head[1] + dy]
+        
         while not self._hits_boundary(curr):
             dist += 1
-            if curr in self.snake_body[1:]: break
+            if curr == self.food_pos:
+                apple_found = 1
+            if curr in self.snake_body[1:]:
+                break
             curr[0] += dx
             curr[1] += dy
             
         is_diagonal = dx != 0 and dy != 0
         factor = np.sqrt(2) if is_diagonal else 1.0
         max_dist = self.grid_size * factor
-        return (dist * factor) / max_dist
+        return (dist * factor) / max_dist, apple_found
 
     def render(self, n_games=0, record=0):
         self.screen.fill((0, 0, 0))

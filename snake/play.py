@@ -6,7 +6,8 @@ from model import Linear_QNet
 def play():
     game = SnakeEnv()
     
-    model = Linear_QNet(24, 256, 256, 3)
+    # 32 inputs to match the new vision logic
+    model = Linear_QNet(32, 256, 256, 3)
     checkpoint = torch.load("model/model.pth", map_location=model.device)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.to_device()
