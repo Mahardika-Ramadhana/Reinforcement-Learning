@@ -67,13 +67,13 @@ class SnakeEnv:
         self.head = [x, y]
         self.snake_body.insert(0, self.head)
 
-        reward = -0.05
+        reward = -0.01
         if self._is_collision() or self.frame_iteration > 200 * len(self.snake_body):
             self.done = True
             reward = -10
 
         elif self.head == self.food_pos:
-            reward = 50
+            reward = 10
             self.score += 1
             self._place_food()
         else:
@@ -124,8 +124,14 @@ class SnakeEnv:
                     break
                 curr[0] += dx
                 curr[1] += dy
-            # Normalisasi jarak (0 sampai 1) agar otak AI tidak bingung
-            vision.append(dist / (self.window_size / self.cell_size))
+            
+            # Fix Normalisasi: Pakai Euclidean Distance agar diagonal tidak melebihi 1.0
+            # Straight directions (dx/dy = 0) -> factor = 1.0
+            # Diagonal directions (dx/dy != 0) -> factor = sqrt(2)
+            is_diagonal = dx != 0 and dy != 0
+            dist_factor = np.sqrt(2) if is_diagonal else 1.0
+            max_possible_dist = (self.window_size / self.cell_size) * dist_factor
+            vision.append((dist * dist_factor) / max_possible_dist)
 
         # 1-4: Bahaya Instan (Up, Right, Down, Left)
         danger_directions = [
@@ -174,7 +180,7 @@ class SnakeEnv:
         )
 
         reward_text = self.font.render(
-            f"Total Reward: {self.total_reward:.2f}", True, (255, 255, 255)
+            f"Score: {self.score} | Total Reward: {self.total_reward:.2f}", True, (255, 255, 255)
         )
 
         self.screen.blit(reward_text, [10, 35])

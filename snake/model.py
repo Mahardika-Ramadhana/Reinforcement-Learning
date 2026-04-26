@@ -46,33 +46,37 @@ class QTrainer:
         next_state = torch.tensor(np.array(next_state), dtype=torch.float).to(
             self.model.device
         )
-        action = torch.tensor(action, dtype=torch.long).to(self.model.device)
-        reward = torch.tensor(reward, dtype=torch.float).to(self.model.device)
+        action = torch.tensor(np.array(action), dtype=torch.float).to(self.model.device)
+        reward = torch.tensor(np.array(reward), dtype=torch.float).to(self.model.device)
+        done = torch.tensor(np.array(done), dtype=torch.float).to(self.model.device)
 
         if len(state.shape) == 1:
             state = torch.unsqueeze(state, 0)
             next_state = torch.unsqueeze(next_state, 0)
             action = torch.unsqueeze(action, 0)
             reward = torch.unsqueeze(reward, 0)
-            done = (done,)
+            done = torch.unsqueeze(done, 0)
 
-        # Prediksi Q-value saat ini
+        # 1. Prediksi Q-value saat ini
         pred = self.model(state)
 
+        # 2. Hitung target Q-value
         target = pred.clone()
         
         # Hitung Q-value untuk state berikutnya dalam satu batch
         with torch.no_grad():
             next_pred = self.model(next_state)
             
-        for idx in range(len(done)):
-            Q_new = reward[idx]
-            if not done[idx]:
-                # IMPLEMENTASI BELLMAN EQUATION: Q_new = R + gamma * max(next_Q)
-                Q_new = reward[idx] + self.gamma * torch.max(next_pred[idx])
+        # BELLMAN EQUATION: Q_new = R + gamma * max(next_Q) * (1 - done)
+        # Jika done=1, maka Q_new cuma Reward (tidak ada masa depan)
+        max_next_q = torch.max(next_pred, dim=1)[0]
+        Q_new = reward + (1 - done) * self.gamma * max_next_q
 
-            # Update target untuk aksi yang diambil
-            target[idx][torch.argmax(action[idx]).item()] = Q_new
+        # Update target hanya untuk aksi yang diambil
+        # action is one-hot [batch_size, 3], so argmax gives the index
+        action_indices = torch.argmax(action, dim=1)
+        batch_indices = torch.arange(len(done)).to(self.model.device)
+        target[batch_indices, action_indices] = Q_new
 
         self.optimizer.zero_grad()
         loss = self.criterion(target, pred)
